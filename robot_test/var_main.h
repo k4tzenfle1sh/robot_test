@@ -21,7 +21,7 @@ struct Cell {
 struct WayCell{
 	int i = NULL; //координата строки
 	int j = NULL; //координата столбца
-	int iteration; //значение итерации на цикле
+	int iteration = NULL; //значение итерации на цикле
 	WayCell()
 	{}
 
