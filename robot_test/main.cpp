@@ -99,6 +99,7 @@ void doRobot(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, i
 	int iteration = 0; //внутренний счетчик итераций
 	bool isCycleIsOver = false;
 	bool isVerticalSearch;
+	bool check_cycle;
 
 	//нулевая итерация пошла
 	A_i = A_BASIC_i;
@@ -108,17 +109,33 @@ void doRobot(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, i
 	CELLS_TABLE[A_i][A_j].isCheckedAlready = true;
 	CELLS_TABLE[A_i][A_j].isUsedOnCycle = true;
 	CELLS_TABLE[A_i][A_j].isMinus_PT = false;
-	bool first_check_cycle = findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
+	check_cycle = findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
 
-	if (first_check_cycle && !isCycleIsOver) {
+	if (check_cycle && !isCycleIsOver) {
 		while (1) {
 			if (iteration % 2 != 0) {
 				isVerticalSearch = true;
-				findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
+				check_cycle = findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
 			}
 			else {
 				isVerticalSearch = false;
-				//findwayHORZ(CELLS_TABLE, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
+				check_cycle = findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
+			}
+			if (check_cycle) {
+				A_i = WAY[WAY.size() - 1].i;
+				A_j = WAY[WAY.size() - 1].j;
+				iteration = WAY[WAY.size() - 1].iteration;
+				continue;
+			}
+			if (WAY[WAY.size() - 1].iteration == iteration || (!check_cycle && !isCycleIsOver)) {
+			//if (!check_cycle && !isCycleIsOver) {
+				CELLS_TABLE[A_i][A_j].isCheckedAlready = true;
+				WAY.pop_back();
+
+				A_i = WAY[WAY.size() - 1].i;
+				A_j = WAY[WAY.size() - 1].j;
+				iteration = WAY[WAY.size() - 1].iteration;
+				continue;
 			}
 		}
 	}
