@@ -5,7 +5,7 @@ struct Cell {
 	double PT = NULL; //потанцевал
 	bool isCheckedAlready = false; //флаг проверки €чейки
 	bool isUsedOnCycle = false; //флаг вершины в цикле перестановки
-	bool isMinus_PT = false; //флаг отрицательной метки
+	bool isMinus_PT = true; //флаг отрицательной метки
 	Cell()
 	{}
 
@@ -18,10 +18,31 @@ struct Cell {
 	}
 };
 
+struct WayCell{
+	int i = NULL; //координата строки
+	int j = NULL; //координата столбца
+	int iteration; //значение итерации на цикле
+	WayCell()
+	{}
+
+	WayCell(int aa, int bb, int cc)
+	{
+		i = aa;
+		j = bb;
+		iteration = cc;
+
+	}
+};
+
 int VERT_M = 3; //кол-во €чеек по вертикали
 int HORZ_M = 4; //кол-во €чеек по горизонтали
+int min = INT_MIN;
+int A_BASIC_i, A_BASIC_j; //координаты исходной точки поиска
 
 Cell **CELLS_TABLE; //массив €чеек
+vector <WayCell> WAY; //вектор пам€ти пути робота
+
 int *U;
 int *V;
+
 
