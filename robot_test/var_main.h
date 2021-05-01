@@ -42,6 +42,8 @@ int A_BASIC_i, A_BASIC_j; //координаты исходной точки поиска
 Cell **CELLS_TABLE; //массив ячеек
 vector <WayCell> WAY; //вектор памяти пути робота
 
+WayCell *SAVETHEWAY;
+
 int *U;
 int *V;
 

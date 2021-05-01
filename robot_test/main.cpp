@@ -11,7 +11,7 @@
 
 using namespace std;
 
-bool checkCell(Cell **CELLS_TABLE, vector <WayCell> WAY, int *i, int *j, int iteration) {
+/*bool checkCell(Cell **CELLS_TABLE, vector <WayCell> WAY, int *i, int *j, int iteration) {
 	if (!CELLS_TABLE[*i][*j].isCheckedAlready || !CELLS_TABLE[*i][*j].isUsedOnCycle) { //если ячейка нигде никак не задействована
 		if (!isnan(CELLS_TABLE[*i][*j].Value)) { //и еще имеет в себе значение, то
 			iteration++; //прибавляем шаг итерации
@@ -26,14 +26,24 @@ bool checkCell(Cell **CELLS_TABLE, vector <WayCell> WAY, int *i, int *j, int ite
 		}
 		else { //если грань поставить нельзя, то
 			CELLS_TABLE[*i][*j].isCheckedAlready = true; //то просто выдем флаг проверки чтобы игнорировать ячейку
+			return false;
 		}
 	}
 	else
 		return false; //если уже проверяли ранее - скип клетки
+}*/
+
+bool checkCell(Cell **CELLS_TABLE, int *i, int *j) {
+	if ((!CELLS_TABLE[*i][*j].isCheckedAlready || !CELLS_TABLE[*i][*j].isUsedOnCycle)&& !isnan(CELLS_TABLE[*i][*j].Value)) //если ячейка нигде никак не задействована
+		return true;
+	else
+		return false; //если уже проверяли ранее - скип клетки
 }
 
-bool findway(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, int A_i, int A_j, int A_BASIC_i, int A_BASIC_j, int iteration, bool isCycleIsOver, bool isVerticalSearch) {
-	int *i_ptr, int *j_ptr; //указатели на i-e, j-e
+
+bool findway(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, int VERT_M, int HORZ_M, int A_i, int A_j, int A_BASIC_i, int A_BASIC_j, int iteration, bool isCycleIsOver[], bool isVerticalSearch) {
+	int *i_ptr;
+	int *j_ptr; //указатели на i-e, j-e
 	int *A_Find; //указатель на предыдущее значение точки, либо пойдем по i, либо по j
 	int *LIMIT; //указатель на размерность массива строки/столбца
 	int A; //это индекс
@@ -44,9 +54,6 @@ bool findway(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, i
 	if (isVerticalSearch) { //если ищем по вертикали, то
 		A_Find = &A_i; //предыдущее значение есть i-e
 		LIMIT = &HORZ_M; // ограничиваем по вертикали (написано, что горизонт, но мне лень править код из-за одной хуйни
-
-		i_ptr = &A; //указатель на поиск точки по i-му есть найденный индекс
-		j_ptr = &A_j; //тогда указатель на j-й есть текущий индекс j-го
 
 		A_check_valid = &A_BASIC_i; //проверяем по i-му базису
 
@@ -59,9 +66,6 @@ bool findway(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, i
 		A_Find = &A_j;
 		LIMIT = &VERT_M;
 
-		i_ptr = &A_i;
-		j_ptr = &A;
-
 		A_check_valid = &A_BASIC_j;
 
 		A_state = &A_i;
@@ -70,13 +74,16 @@ bool findway(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, i
 
 
 	for (A = *A_Find - 1;; A--) { //идем по методу северо-западного угла, идем в точку [0;0]
+		if (A < 0) {
+			A = *LIMIT - 1; //если точка прямо сходу ушла в никуда 
+		}
 		if (A == *A_check_valid && *A_state == *A_state_from) { //если координаты текущей ячейки и базовой совпали
-			if (iteration > 0) { //и если итерация не нулевая есесна
-				isCycleIsOver = true; //то цикл завершен, флаг выдан
+			if (iteration > 4 && iteration%2==0) { //и если итерация не нулевая есесна
+				isCycleIsOver[0] = true; //то цикл завершен, флаг выдан
 				return true;
 			}
 			else { //иначе грань ставить некуда, все хуйня давай по новой, Миш
-				isCycleIsOver = true;
+				isCycleIsOver[0] = true;
 				return false;
 			}
 		}
@@ -84,22 +91,48 @@ bool findway(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, i
 			return false;
 		}
 		else {
-				ifCheckedisTrue = checkCell(CELLS_TABLE, WAY, i_ptr, j_ptr, iteration);
-				if (ifCheckedisTrue)
-					return true;
-				else;
+			if (isVerticalSearch) {
+				i_ptr = &A; //указатель на поиск точки по i-му есть найденный индекс
+				j_ptr = &A_j; //тогда указатель на j-й есть текущий индекс j-го
+			}
+			else {
+				i_ptr = &A_i;
+				j_ptr = &A;
+			}
+			if (checkCell(CELLS_TABLE, i_ptr, j_ptr)) {
+				SAVETHEWAY[iteration].i = *i_ptr;
+				SAVETHEWAY[iteration].j = *j_ptr;
+				SAVETHEWAY[iteration].iteration = iteration + 1;
+
+				CELLS_TABLE[*i_ptr][*j_ptr].isCheckedAlready = true; //выдаем флаг проверки ячейки
+				CELLS_TABLE[*i_ptr][*j_ptr].isUsedOnCycle = true; //выдаем флаг вершины цикла
+
+				
+				if (SAVETHEWAY[iteration].iteration % 2 == 0) //если четная
+					CELLS_TABLE[*i_ptr][*j_ptr].isMinus_PT = false; //то плюс на грань
+				else
+					CELLS_TABLE[*i_ptr][*j_ptr].isMinus_PT = true; //иначе - минус
+				return true;
+			}
+			else {
+				CELLS_TABLE[*i_ptr][*j_ptr].isCheckedAlready = true;
+			}
 		}
 		if (A - 1 < 0)
 			A = *LIMIT;
 	}
 
 }
-void doRobot(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, int A_BASIC_i, int A_BASIC_j) {
+
+
+void doRobot(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int VERT_M, int HORZ_M, int A_BASIC_i, int A_BASIC_j) {
 	int A_i, A_j; //внутренние координаты точки
 	int iteration = 0; //внутренний счетчик итераций
-	bool isCycleIsOver = false;
-	bool isVerticalSearch;
+	bool isVerticalSearch = true;
 	bool check_cycle;
+
+	bool isCycleIsOver[1];
+	isCycleIsOver[0] = false;
 
 	//нулевая итерация пошла
 	A_i = A_BASIC_i;
@@ -109,25 +142,35 @@ void doRobot(Cell **CELLS_TABLE, vector <WayCell> WAY, int VERT_M, int HORZ_M, i
 	CELLS_TABLE[A_i][A_j].isCheckedAlready = true;
 	CELLS_TABLE[A_i][A_j].isUsedOnCycle = true;
 	CELLS_TABLE[A_i][A_j].isMinus_PT = false;
-	check_cycle = findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
 
-	if (check_cycle && !isCycleIsOver) {
+
+	SAVETHEWAY = new WayCell[1];
+	
+	check_cycle = findway(CELLS_TABLE, SAVETHEWAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
+	WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j, SAVETHEWAY[0].iteration));
+	iteration = iteration + SAVETHEWAY[0].iteration;
+
+	if (check_cycle && !isCycleIsOver[0]) {
 		while (1) {
+			SAVETHEWAY = new WayCell[1];
 			if (iteration % 2 != 0) {
 				isVerticalSearch = true;
-				check_cycle = findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
+				check_cycle = findway(CELLS_TABLE, SAVETHEWAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
 			}
 			else {
 				isVerticalSearch = false;
-				check_cycle = findway(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
+				check_cycle = findway(CELLS_TABLE, SAVETHEWAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);	
 			}
-			if (check_cycle) {
+
+			WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j, SAVETHEWAY[0].iteration));
+			iteration = iteration + SAVETHEWAY[0].iteration;
+
+			if (check_cycle && !isCycleIsOver[0]) {
 				A_i = WAY[WAY.size() - 1].i;
 				A_j = WAY[WAY.size() - 1].j;
-				iteration = WAY[WAY.size() - 1].iteration;
 				continue;
 			}
-			if (WAY[WAY.size() - 1].iteration == iteration || (!check_cycle && !isCycleIsOver)) {
+			if (WAY[WAY.size() - 1].iteration == iteration || (!check_cycle && (isCycleIsOver[0] || !isCycleIsOver[0]))) {
 			//if (!check_cycle && !isCycleIsOver) {
 				CELLS_TABLE[A_i][A_j].isCheckedAlready = true;
 				WAY.pop_back();
@@ -206,8 +249,9 @@ int main() {
 	}
 
 	cout << min << "\t x = " << A_BASIC_i << " y = " << A_BASIC_j << endl;
+	cout << "| " << CELLS_TABLE[A_BASIC_i][A_BASIC_j].Value << " | " << CELLS_TABLE[A_BASIC_i][A_BASIC_j].PT << " |";
 
-	doRobot(CELLS_TABLE, WAY, VERT_M, HORZ_M, A_BASIC_i, A_BASIC_j);
+	doRobot(CELLS_TABLE, SAVETHEWAY, WAY, VERT_M, HORZ_M, A_BASIC_i, A_BASIC_j);
 	_getch();
 	return 0;
 }
