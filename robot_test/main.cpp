@@ -65,7 +65,7 @@ void showVectorWAY(vector <WayCell> WAY) {
 	cout << "| N | i | j | itr |" << endl;
 	cout << "|-----------------|" << endl;
 	for (int i = 0; i < WAY.size(); i++) {
-		cout << "| " << i << " | " << WAY[i].i << " | " << WAY[i].j << " |  " << WAY[i].iteration << "  |" << endl;
+		cout << "| " << i << " | " << WAY[i].i << " | " << WAY[i].j << " |" << endl;
 	}
 	cout << "|-----------------|" << endl;
 }
@@ -145,8 +145,11 @@ void replaceCycle(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY,
 	//собсна, делаем перерасчет по минимальному элементу
 	for (int i = 0; i < WAY.size(); i++) {
 		if (CELLS_TABLE[WAY[i].i][WAY[i].j].isUsedOnCycle) {
-			if (CELLS_TABLE[WAY[i].i][WAY[i].j].isMinus_PT == true)
+			if (CELLS_TABLE[WAY[i].i][WAY[i].j].isMinus_PT == true) {
 				CELLS_TABLE[WAY[i].i][WAY[i].j].Value = CELLS_TABLE[WAY[i].i][WAY[i].j].Value - MIN; //отрицательные нужно отнять
+				if (CELLS_TABLE[WAY[i].i][WAY[i].j].Value == 0.0)
+					CELLS_TABLE[WAY[i].i][WAY[i].j].Value = NAN;
+			}
 			else {
 				if (!isnan(CELLS_TABLE[WAY[i].i][WAY[i].j].Value)) //главное, чтобы не NaN
 					CELLS_TABLE[WAY[i].i][WAY[i].j].Value = CELLS_TABLE[WAY[i].i][WAY[i].j].Value + MIN; //а положительные, кто бы мог подумать, сложить
@@ -360,9 +363,9 @@ void doRobot(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int 
 
 			}
 			if (check_cycle && isCycleIsOver[0]) {
-				SAVETHEWAY[0].i = A_BASIC_i;
+				/*SAVETHEWAY[0].i = A_BASIC_i;
 				SAVETHEWAY[0].j = A_BASIC_j;
-				WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j));
+				WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j));*/
 				showVectorWAY(WAY);
 				cout << "cycle is done. great job. \nit's wednesday my dudes." << endl;
 				replaceCycle(CELLS_TABLE, SAVETHEWAY, WAY, VERT_M, HORZ_M);
@@ -441,6 +444,26 @@ int main() {
 	cout << "| " << CELLS_TABLE[A_BASIC_i][A_BASIC_j].Value << " | " << CELLS_TABLE[A_BASIC_i][A_BASIC_j].PT << " |" << endl;
 
 	doRobot(CELLS_TABLE, SAVETHEWAY, WAY, VERT_M, HORZ_M, A_BASIC_i, A_BASIC_j);
+
+
+	cout << "new shiiit~\n|------------------------------------|" << endl;
+	for (int i = 0; i < HORZ_M; i++) {
+		for (int j = 0; j < VERT_M; j++) {
+			if (isnan(CELLS_TABLE[i][j].Value))
+				cout << "| NN | " << CELLS_TABLE[i][j].PT << " |";
+			else
+				cout << "| " << CELLS_TABLE[i][j].Value << " | " << CELLS_TABLE[i][j].PT << " |";
+			if (j + 1 >= VERT_M)
+				cout << "| " << U[i] << " |";
+		}
+		cout << endl;
+	}
+	cout << "|------------------------------------|" << endl;
+	for (int j = 0; j < VERT_M; j++) {
+		cout << "| " << V[j] << " |";
+	}
+	cout << endl << "|------------------------------------|" << endl;
+
 	_getch();
 	return 0;
 }
