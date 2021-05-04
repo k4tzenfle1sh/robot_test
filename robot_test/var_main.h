@@ -21,15 +21,13 @@ struct Cell {
 struct WayCell{
 	int i = NULL; //координата строки
 	int j = NULL; //координата столбца
-	int iteration = NULL; //значение итерации на цикле
 	WayCell()
 	{}
 
-	WayCell(int aa, int bb, int cc)
+	WayCell(int aa, int bb)
 	{
 		i = aa;
 		j = bb;
-		iteration = cc;
 
 	}
 };
@@ -46,5 +44,3 @@ WayCell *SAVETHEWAY;
 
 int *U;
 int *V;
-
-

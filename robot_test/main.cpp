@@ -104,10 +104,64 @@ void deleteWAY() {
 	cout << "doRobot\tAlien" << ": previous cell from WAY is deleted now" << endl;;
 }
 
+void cleanMemory(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int HORZ_M, int VERT_M) {
+	for (int i = 0; i < HORZ_M; i++) {
+		for (int j = 0; j < VERT_M; j++) {
+			if (CELLS_TABLE[i][j].isCheckedAlready == true) { //если ячейка как-то проверялась, то
+				//затираем все к ебаной матери
+				CELLS_TABLE[i][j].isCheckedAlready = false;
+				CELLS_TABLE[i][j].isUsedOnCycle = false;
+				CELLS_TABLE[i][j].isMinus_PT = true;
+			}
+		}
+	}
+
+	//удаляем массив памяти итерации
+	delete [] SAVETHEWAY;
+
+	//и затираем саму память цикла
+	WAY.clear();
+
+	/*
+	Press
+	F
+	To
+	Pay
+	Respect
+	*/
+}
+	
+
+void replaceCycle(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int VERT_M, int HORZ_M) {
+	int MIN = INT_MAX;
+	//поиск минимального элемента
+	for (int i = 0; i < WAY.size(); i++) { //зная точные i,j делаем явную подстановку в основную таблицу по каждому элементу 
+		if (CELLS_TABLE[WAY[i].i][WAY[i].j].isUsedOnCycle && CELLS_TABLE[WAY[i].i][WAY[i].j].isMinus_PT == true) { //если ячейка действительна задействована и при этом минусовая, то
+			if (CELLS_TABLE[WAY[i].i][WAY[i].j].Value <= MIN) //проверяем ее на маленькость
+				MIN = CELLS_TABLE[WAY[i].i][WAY[i].j].Value; 
+		}
+	}
+
+	//собсна, делаем перерасчет по минимальному элементу
+	for (int i = 0; i < WAY.size(); i++) {
+		if (CELLS_TABLE[WAY[i].i][WAY[i].j].isUsedOnCycle) {
+			if (CELLS_TABLE[WAY[i].i][WAY[i].j].isMinus_PT == true)
+				CELLS_TABLE[WAY[i].i][WAY[i].j].Value = CELLS_TABLE[WAY[i].i][WAY[i].j].Value - MIN; //отрицательные нужно отнять
+			else {
+				if (!isnan(CELLS_TABLE[WAY[i].i][WAY[i].j].Value)) //главное, чтобы не NaN
+					CELLS_TABLE[WAY[i].i][WAY[i].j].Value = CELLS_TABLE[WAY[i].i][WAY[i].j].Value + MIN; //а положительные, кто бы мог подумать, сложить
+				else
+					CELLS_TABLE[WAY[i].i][WAY[i].j].Value = 0.0 + MIN; //а иначе просто прибавим к нулю, как и должно быть
+			}
+		}
+	}
+
+	cleanMemory(CELLS_TABLE, SAVETHEWAY, WAY, HORZ_M, VERT_M); //цикл завершен, пора подчистить память и все флаги перерасчета
+}
 
 bool checkCell(Cell **CELLS_TABLE, int *i, int *j) {
 	if ((!CELLS_TABLE[*i][*j].isCheckedAlready && !CELLS_TABLE[*i][*j].isUsedOnCycle) && !isnan(CELLS_TABLE[*i][*j].Value)) //если ячейка нигде никак не задействована
-		return true;
+		return true; //то все гуд
 	else
 		return false; //если уже проверяли ранее - скип клетки
 }
@@ -149,7 +203,7 @@ bool findway(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, int VERT_M, int HORZ_M, in
 			A = *LIMIT - 1; //если точка прямо сходу ушла в никуда 
 		}
 		if (A == *A_check_valid && *A_state == *A_state_from) { //если координаты текущей ячейки и базовой совпали
-			if ((iteration+1) >= 4 && (iteration + 1)%2==0) { //и если итерация не нулевая есесна
+			if ((iteration + 1) >= 4 && (iteration + 1) % 2 == 0) { //и если итерация не нулевая есесна
 				isCycleIsOver[0] = true; //то цикл завершен, флаг выдан
 				return true;
 			}
@@ -171,26 +225,25 @@ bool findway(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, int VERT_M, int HORZ_M, in
 				j_ptr = &A;
 			}
 			if (checkCell(CELLS_TABLE, i_ptr, j_ptr)) {
-				SAVETHEWAY[0].i = *i_ptr;
-				SAVETHEWAY[0].j = *j_ptr;
-				SAVETHEWAY[0].iteration = 1;
+				SAVETHEWAY[0].i = *i_ptr; //сейвим i-e в массиве, шоб ниче никуда не съебнуло
+				SAVETHEWAY[0].j = *j_ptr; //так же сейвим j-e
 
 				CELLS_TABLE[*i_ptr][*j_ptr].isCheckedAlready = true; //выдаем флаг проверки ячейки
 				CELLS_TABLE[*i_ptr][*j_ptr].isUsedOnCycle = true; //выдаем флаг вершины цикла
 
 				
-				if (iteration % 2 == 0) //если четная
+				if ((iteration+1) % 2 == 0) //если четная
 					CELLS_TABLE[*i_ptr][*j_ptr].isMinus_PT = false; //то плюс на грань
 				else
 					CELLS_TABLE[*i_ptr][*j_ptr].isMinus_PT = true; //иначе - минус
 				return true;
 			}
 			else {
-				CELLS_TABLE[*i_ptr][*j_ptr].isCheckedAlready = true;
+				CELLS_TABLE[*i_ptr][*j_ptr].isCheckedAlready = true; //иначе просто выдаем флаг проверки ячейки
 			}
 		}
-		if (A - 1 < 0)
-			A = *LIMIT;
+		if (A - 1 < 0) //если при попытке уйти на предыдущий элемент мы выйдем за пределы массива, то
+			A = *LIMIT; //тупа присвоим пограничное значение оси
 	}
 
 }
@@ -198,14 +251,14 @@ bool findway(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, int VERT_M, int HORZ_M, in
 void doRobot(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int VERT_M, int HORZ_M, int A_BASIC_i, int A_BASIC_j) {
 	int A_i, A_j; //внутренние координаты точки
 	int iteration = 0; //внутренний счетчик итераций
-	bool isVerticalSearch = true;
-	bool check_cycle;
+	bool isVerticalSearch = true; //на нулевой итерации будем идти всегда по вертикали
+	bool check_cycle; //нужная хуйня
 
-	bool isCycleIsOver[1];
+	bool isCycleIsOver[1]; //ебаный компилятор решил затирать все указатели после выполнения ф-ций, пришлось костылить
 	isCycleIsOver[0] = false;
-	
+
 	//нулевая итерация пошла
-	A_i = A_BASIC_i;
+	A_i = A_BASIC_i; //присваиваем коэффициенты i, j первой ячейки
 	A_j = A_BASIC_j;
 	showStep(iteration);
 	findCell(CELLS_TABLE, A_i, A_j);
@@ -214,9 +267,11 @@ void doRobot(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int 
 	isMinusDropped(CELLS_TABLE, A_i, A_j);
 
 
-	WAY.push_back(WayCell(A_i, A_j, iteration)); //вносим в путь первый шаг
+	WAY.push_back(WayCell(A_i, A_j)); //вносим в путь первый шаг
 	showStep(iteration);
 	showVectorWAY(WAY);
+
+	//выставляем все флаги
 	CELLS_TABLE[A_i][A_j].isCheckedAlready = true;
 	changeChecked(CELLS_TABLE, A_i, A_j);
 	CELLS_TABLE[A_i][A_j].isUsedOnCycle = true;
@@ -224,42 +279,42 @@ void doRobot(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int 
 	CELLS_TABLE[A_i][A_j].isMinus_PT = false;
 	changeMinus(CELLS_TABLE, A_i, A_j);
 
-	SAVETHEWAY = new WayCell[1];
-	
-	
+	SAVETHEWAY = new WayCell[1]; //создаем единичный динам. массив, чтобы хранить значения после выполнения ф-ции
+
+	//пошло говно по трубам
 	check_cycle = findway(CELLS_TABLE, SAVETHEWAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
-	WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j, SAVETHEWAY[0].iteration));
-	showStep(iteration);
-	showVectorWAY(WAY);
 
-	A_i = WAY[WAY.size() - 1].i;
-	A_j = WAY[WAY.size() - 1].j;
-	A_change();
-	findCell(CELLS_TABLE, A_i, A_j);
-	isCheckedAlready(CELLS_TABLE, A_i, A_j);
-	isUsedOnCycle(CELLS_TABLE, A_i, A_j);
-	isMinusDropped(CELLS_TABLE, A_i, A_j);
+	if (check_cycle && !isCycleIsOver[0]) { //если мы сразу же не обосрались, то 
+		WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j)); // вносим второй шаг
+		iteration = WAY.size() - 1; //увеличиваем итерацию
+		showStep(iteration);
+		showVectorWAY(WAY);
 
-	iteration = WAY.size() - 1;
-	
-	if (check_cycle && !isCycleIsOver[0]) {
-		while (1) {
+		A_i = WAY[WAY.size() - 1].i; //присваиваем коэффициенты i, j найденной ячейки
+		A_j = WAY[WAY.size() - 1].j;
+		A_change();
+		findCell(CELLS_TABLE, A_i, A_j);
+		isCheckedAlready(CELLS_TABLE, A_i, A_j);
+		isUsedOnCycle(CELLS_TABLE, A_i, A_j);
+		isMinusDropped(CELLS_TABLE, A_i, A_j);
+
+		while (1) { //пошли гонять лысого, эээ, то есть цикл
 			showStep(iteration);
-			if (iteration % 2 == 0) {
+			if (iteration % 2 == 0) { //если итерация, то идем искать строго вверх
 				isVerticalSearch = true;
 				thereAreWe(isVerticalSearch);
 				check_cycle = findway(CELLS_TABLE, SAVETHEWAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
 			}
-			else {
+			else { //иначе вдоль
 				isVerticalSearch = false;
 				thereAreWe(isVerticalSearch);
-				check_cycle = findway(CELLS_TABLE, SAVETHEWAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);	
+				check_cycle = findway(CELLS_TABLE, SAVETHEWAY, VERT_M, HORZ_M, A_i, A_j, A_BASIC_i, A_BASIC_j, iteration, isCycleIsOver, isVerticalSearch);
 			}
 
-			if (check_cycle && !isCycleIsOver[0]) {
-				WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j, SAVETHEWAY[0].iteration));
+			if (check_cycle && !isCycleIsOver[0]) { //если не обсер, то
+				WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j)); //вносим n-й	шаг
 				showVectorWAY(WAY);
-				A_i = WAY[WAY.size() - 1].i;
+				A_i = WAY[WAY.size() - 1].i; //присваиваем коэффициенты i, j найденной ячейки
 				A_j = WAY[WAY.size() - 1].j;
 				A_change();
 				findCell(CELLS_TABLE, A_i, A_j);
@@ -267,28 +322,25 @@ void doRobot(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int 
 				isUsedOnCycle(CELLS_TABLE, A_i, A_j);
 				isMinusDropped(CELLS_TABLE, A_i, A_j);
 
-				iteration = WAY.size() - 1;
-				//iteration = iteration + SAVETHEWAY[0].iteration;
+				iteration = WAY.size() - 1; //увеличиваем итерацию
 				continue;
 			}
-			//if (WAY[WAY.size() - 1].iteration == iteration || (!check_cycle && (isCycleIsOver[0] || !isCycleIsOver[0]))) {
-			if (!check_cycle && (isCycleIsOver[0] || !isCycleIsOver[0])) {
-				//if (!check_cycle && !isCycleIsOver) {
+			if (!check_cycle && (isCycleIsOver[0] || !isCycleIsOver[0])) { //если по выбранной оси ничего нет, и при этом мы не вернулись к базисной точке 
 				isCheckedAlready(CELLS_TABLE, A_i, A_j);
-				CELLS_TABLE[A_i][A_j].isCheckedAlready = true;
+				CELLS_TABLE[A_i][A_j].isCheckedAlready = true; //даем флаг, что ячейка проверена и игнорим ее дальше
 				changeChecked(CELLS_TABLE, A_i, A_j);
 
 				isUsedOnCycle(CELLS_TABLE, A_i, A_j);
-				if (CELLS_TABLE[A_i][A_j].isUsedOnCycle)
+				if (CELLS_TABLE[A_i][A_j].isUsedOnCycle) //если мы уже успели ее включить в цикл, то затираем флаг цикла
 					CELLS_TABLE[A_i][A_j].isUsedOnCycle = false;
 				changeUsed(CELLS_TABLE, A_i, A_j);
 
-				WAY.pop_back();
-				deleteWAY();
+				WAY.pop_back(); //удаляем неудавшийся элемент из памяти
+				deleteWAY(); 
 				showVectorWAY(WAY);
 
-				if (WAY.size() > 0) {
-					A_i = WAY[WAY.size() - 1].i;
+				if (WAY.size() > 0) { //если еще есть куда откатываться назад по вершинам, то 
+					A_i = WAY[WAY.size() - 1].i; //таки возвращаемся
 					A_j = WAY[WAY.size() - 1].j;
 
 					A_change();
@@ -297,28 +349,28 @@ void doRobot(Cell **CELLS_TABLE, WayCell *SAVETHEWAY, vector <WayCell> WAY, int 
 					isUsedOnCycle(CELLS_TABLE, A_i, A_j);
 					isMinusDropped(CELLS_TABLE, A_i, A_j);
 
-					iteration = WAY.size() - 1;
+					iteration = WAY.size() - 1; //свапаем итерацию на предыдующую
 					continue;
 				}
 
-				else {
+				else { //если некуда, то все, цикл для этой точки построить нельзя
 					cout << "You cannot do anything else there. Go find another way, stalker" << endl;
 					break;
 				}
-				
+
 			}
 			if (check_cycle && isCycleIsOver[0]) {
 				SAVETHEWAY[0].i = A_BASIC_i;
 				SAVETHEWAY[0].j = A_BASIC_j;
-				SAVETHEWAY[0].iteration = 1;
-				WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j, SAVETHEWAY[0].iteration));
+				WAY.push_back(WayCell(SAVETHEWAY[0].i, SAVETHEWAY[0].j));
 				showVectorWAY(WAY);
 				cout << "cycle is done. great job. \nit's wednesday my dudes." << endl;
+				replaceCycle(CELLS_TABLE, SAVETHEWAY, WAY, VERT_M, HORZ_M);
 				break;
 			}
 		}
 	}
-	else
+	else //иначе робот не нашел куда ставить вторую вершину по вертикали, скипаем
 		cout << "You cannot do anything else there. Go find another way" << endl;
 }
 
@@ -335,7 +387,7 @@ int main() {
 	
 	for (int i = 0; i < HORZ_M; i++) {
 		for (int j = 0; j < VERT_M; j++) {
-			if ((i == 0 && j == 0) || (i == 1 && j == 0) || (i == 1 && j == 1) || (i == 2 && j == 1) || (i == 2 && j == 2) || (i == 2 && j == 3))
+			if ((i == 0 && j == 0) || (i == 1 && j == 0) || (i == 1 && j == 1) || (i == 2 && j == 1) || (i == 2 && j == 2) || (i == 3 && j == 2))
 				CELLS_TABLE[i][j].Value = double(1 + rand() % 99);
 			else
 				CELLS_TABLE[i][j].Value = NAN;
